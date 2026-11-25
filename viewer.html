@@ -108,7 +108,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  const TOTAL_PAGES = 4; // 실제 페이지 수에 맞게 수정
+  const TOTAL_PAGES = 139; // 실제 페이지 수에 맞게 수정
   const params = new URLSearchParams(window.location.search);
   const childId = params.get('child');
   const bookId  = params.get('book');
@@ -119,16 +119,20 @@
     init();
   }
 
- async function init() {
-  // 테스트 단계에서는 Firestore 이름 조회 생략하고 고정 텍스트 사용
-  document.getElementById('bookTitle').textContent = `테스트북 - 4페이지`;
-  document.getElementById('backLink').href = `shelf.html`;
+  async function init() {
+    const docRef = doc(db, "children", childId);
+    const docSnap = await getDoc(docRef);
+    const childName = docSnap.exists() ? docSnap.data().name : childId;
 
-  const pageImages = [];
-  for (let i = 1; i <= TOTAL_PAGES; i++) {
-    const p = String(i).padStart(3, '0');
-    pageImages.push(`C:\Users\20220342\Pictures/test{p}.jpg`); // 👈 경로도 테스트용으로 고정
-  }
+    document.getElementById('bookTitle').textContent = `${childName} - 제 ${Number(bookId)}권`;
+    document.getElementById('backLink').href = `shelf.html?child=${childId}`;
+
+    // 이미지 경로: 완성된 이미지(디자인 포함)를 순서대로 불러오기
+    const pageImages = [];
+    for (let i = 1; i <= TOTAL_PAGES; i++) {
+      const p = String(i).padStart(3, '0');
+      pageImages.push(`pages/${childId}/vol${bookId}/page${p}.jpg`);
+    }
 
     // ===== 핵심: 항상 처음(1페이지, 표지)부터 시작 =====
     const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
