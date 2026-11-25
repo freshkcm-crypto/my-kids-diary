@@ -35,4 +35,41 @@
   </div>
 
 </body>
+</html><!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>책장 테스트</title>
+<style>
+  body {
+    margin: 0;
+    font-family: "Malgun Gothic", sans-serif;
+    background-color: #e9dcc5;
+    min-height: 100vh;
+    padding: 60px 40px;
+  }
+  .child-title { text-align: center; font-size: 30px; font-weight: bold; color: #4a3322; margin-bottom: 40px; }
+  .shelf-grid { display: flex; justify-content: center; }
+  .book-item { text-decoration: none; text-align: center; color: #3d2b1a; }
+  .book-cover {
+    width: 96px; height: 128px; object-fit: cover; border-radius: 2px;
+    box-shadow: 2px 4px 6px rgba(0,0,0,0.35);
+  }
+  .book-label { display: block; margin-top: 8px; font-size: 13px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+  <h1 class="child-title">첫째 아들의 일기장 (테스트)</h1>
+
+  <div class="shelf-grid">
+    <a class="book-item" href="viewer.html?book=01">
+      <img class="book-cover" 
+           src="https://via.placeholder.com/96x128?text=1" 
+           alt="제1권">
+      <span class="book-label">제 1권</span>
+    </a>
+  </div>
+
+</body>
 </html>
