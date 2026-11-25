@@ -42,7 +42,17 @@
     display: flex; align-items: center; justify-content: center;
     padding: 10px;
   }
-  #flipbook { touch-action: pan-y; }
+ 
+  /* ===== 핵심 수정: 비율을 고정하는 래퍼 ===== */
+  .flip-ratio-box {
+    /* 520:735 비율을 그대로 유지 (가로 1 기준 세로 1.4135...) */
+    aspect-ratio: 520 / 735;
+    height: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  } 
+ 
+ #flipbook { touch-action: pan-y; }
 
   /* ===== 하단 바 ===== */
   .bottom-bar {
