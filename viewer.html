@@ -24,32 +24,27 @@
   .music-bar button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
   .music-title { font-size: 12px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* ===== 핵심 수정: 틀 자체의 "폭"이 바뀌는 구조 ===== */
+  /* ===== 바깥 공간: 화면 중앙에 배치하는 역할만 함 ===== */
   .flip-wrap {
     position: fixed; top: 56px; bottom: 60px; left: 0; right: 0;
-    display: flex; align-items: center; justify-content: center; /* 가로폭이 얼마든 항상 중앙 */
-    padding: 10px;
+    display: flex; align-items: center; justify-content: center;
   }
 
-  .flip-ratio-box {
-    height: 100%;
-    max-width: 100%;
-    aspect-ratio: 1040 / 735;  /* 펼침(spread) 상태 - 기본값 */
-    margin: 0 auto;
+  /* ===== "창문(viewport)": 보이는 크기만 조절, 책 자체는 안 건드림 ===== */
+  .flip-viewport {
     position: relative;
-    overflow: visible;         /* 더 이상 자를 필요 없음 */
-    transition: aspect-ratio 0.25s ease;
-  }
-  /* 단독 페이지(표지 / 짝수번째 마지막장)일 때는 틀 폭을 "절반"으로 */
-  .flip-ratio-box.single-page {
-    aspect-ratio: 520 / 735;
+    overflow: hidden;             /* 창문 밖은 가려짐 */
+    transition: width 0.3s ease;  /* 창문 크기 변화만 부드럽게 */
   }
 
-  #flipbook {
-    width: 100% !important;
-    height: 100% !important;
-    touch-action: pan-y;
+  /* ===== "책 무대(stage)": 항상 "펼친 상태"의 고정 크기 유지, 절대 안 바뀜 ===== */
+  .flip-stage {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: left 0.3s ease;   /* 좌우로 밀리는 것만 부드럽게 */
   }
+  #flipbook { width: 100% !important; height: 100% !important; touch-action: pan-y; }
 
   .bottom-bar {
     position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
@@ -78,8 +73,10 @@
   <audio id="bgmPlayer" loop></audio>
 
   <div class="flip-wrap">
-    <div class="flip-ratio-box" id="ratioBox">
-      <div id="flipbook"></div>
+    <div class="flip-viewport" id="flipViewport">
+      <div class="flip-stage" id="flipStage">
+        <div id="flipbook"></div>
+      </div>
     </div>
   </div>
 
@@ -112,6 +109,7 @@
   const TOTAL_PAGES = 4;
   const IMAGE_FOLDER = "pages/test/vol01";
   const BGM_PATH = "music/test_bgm.mp3";
+  const SPREAD_RATIO = 1040 / 735; // 책을 "펼쳤을 때" 가로:세로 비율 (고정값, 절대 안 바뀜)
 
   const params = new URLSearchParams(window.location.search);
   const childId = params.get('child');
@@ -139,12 +137,33 @@
       pageImages.push(`${IMAGE_FOLDER}/page${p}.jpg`);
     }
 
+    // ===== 핵심: flipbook이 들어갈 "stage"는 항상 고정 크기 =====
+    // StPageFlip에게는 "항상 펼친 상태의 일정한 공간"만 줘서,
+    // 라이브러리 내부가 절대 재계산/재애니메이션 하지 않게 함
+    const wrap = document.querySelector('.flip-wrap');
+    const viewport = document.getElementById('flipViewport');
+    const stage = document.getElementById('flipStage');
+
+    function computeStageSize() {
+      const wrapH = wrap.clientHeight;
+      const wrapW = wrap.clientWidth;
+      let h = wrapH;
+      let w = h * SPREAD_RATIO;
+      if (w > wrapW) { w = wrapW; h = w / SPREAD_RATIO; }
+      stage.style.width = w + 'px';
+      stage.style.height = h + 'px';
+      return { w, h };
+    }
+
+    let { w: stageW, h: stageH } = computeStageSize();
+    viewport.style.height = stageH + 'px';
+
     const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
       width: 520,
       height: 735,
       size: 'stretch',
-      minWidth: 260, maxWidth: 1100,
-      minHeight: 368, maxHeight: 1556,
+      minWidth: 260, maxWidth: 1600,
+      minHeight: 368, maxHeight: 2200,
       showCover: true,
       usePortrait: true,
       maxShadowOpacity: 0.5,
@@ -156,25 +175,31 @@
 
     const slider = document.getElementById('pageSlider');
     slider.max = TOTAL_PAGES;
-    const ratioBox = document.getElementById('ratioBox');
 
-    // ===== 핵심 로직: 지금이 "단독 페이지"인지 판단 =====
-    // 규칙: 1페이지(표지)는 항상 단독.
-    //       마지막 페이지는, 전체 페이지 수(N)가 "짝수"일 때만 단독.
-    //       (1권은 이미 단독 1장을 썼으므로, 남은 (N-1)장이 짝이 맞으려면
-    //        N이 짝수여야 마지막 1장이 혼자 남음)
-    function isSinglePageView(currentIndex) {
-      const isCover = currentIndex === 0;
+    // ===== 이 페이지가 "단독"인지, 어느 쪽(왼/우)인지 판단 =====
+    function getSingleMode(currentIndex) {
+      if (currentIndex === 0) return 'cover';            // 1페이지: 항상 단독, 오른쪽
       const isLastAlone = (currentIndex === TOTAL_PAGES - 1) && (TOTAL_PAGES % 2 === 0);
-      return isCover || isLastAlone;
+      if (isLastAlone) return 'last';                     // 마지막(짝수 총페이지일 때): 단독, 왼쪽
+      return null;                                         // 그 외: 양면 펼침
     }
 
-    function updateLayout() {
+    function updateViewport() {
       const current = pageFlip.getCurrentPageIndex();
-      if (isSinglePageView(current)) {
-        ratioBox.classList.add('single-page');   // 틀 폭을 절반으로 → 중앙 정렬됨
+      const mode = getSingleMode(current);
+
+      if (mode === 'cover') {
+        // 오른쪽 절반만 보여줌 → 창문 폭 절반, 책을 왼쪽으로 반 칸 밀기
+        viewport.style.width = (stageW / 2) + 'px';
+        stage.style.left = (-stageW / 2) + 'px';
+      } else if (mode === 'last') {
+        // 왼쪽 절반만 보여줌 → 창문 폭 절반, 책은 안 밀어도 됨
+        viewport.style.width = (stageW / 2) + 'px';
+        stage.style.left = '0px';
       } else {
-        ratioBox.classList.remove('single-page'); // 틀 폭을 전체(펼침)로
+        // 양면 펼침 → 창문 전체 폭, 책 위치 그대로
+        viewport.style.width = stageW + 'px';
+        stage.style.left = '0px';
       }
     }
 
@@ -184,9 +209,16 @@
       slider.value = current;
     }
 
-    pageFlip.on('flip', () => { updateIndicator(); updateLayout(); });
+    pageFlip.on('flip', () => { updateIndicator(); updateViewport(); });
     updateIndicator();
-    updateLayout(); // 처음 열렸을 때도 한 번 적용
+    updateViewport();
+
+    window.addEventListener('resize', () => {
+      const size = computeStageSize();
+      stageW = size.w; stageH = size.h;
+      viewport.style.height = stageH + 'px';
+      updateViewport();
+    });
 
     document.getElementById('prevBtn').addEventListener('click', () => pageFlip.flipPrev());
     document.getElementById('nextBtn').addEventListener('click', () => pageFlip.flipNext());
