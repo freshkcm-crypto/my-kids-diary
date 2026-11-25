@@ -108,7 +108,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  const TOTAL_PAGES = 139; // 실제 페이지 수에 맞게 수정
+  const TOTAL_PAGES = 4; // 실제 페이지 수에 맞게 수정
   const params = new URLSearchParams(window.location.search);
   const childId = params.get('child');
   const bookId  = params.get('book');
