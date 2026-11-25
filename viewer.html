@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>일기장 뷰어</title>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #2b2b2b;
+    font-family: "Malgun Gothic", sans-serif;
+    overflow: hidden;
+  }
+
+  /* ===== 상단 바 ===== */
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    z-index: 100;
+  }
+  .top-bar a { color: #fff; text-decoration: none; font-size: 14px; font-weight: bold; }
+  .top-bar a:hover { text-decoration: underline; }
+  .book-title { font-size: 15px; font-weight: bold; }
+
+  /* ===== 플립북 영역 =====
+     처음(표지)에는 화면 중앙에 "단독 페이지"처럼 보이게,
+     이후 펼쳐지면 자연스럽게 양면으로 전환됩니다. */
+  .flip-wrap {
+    position: fixed;
+    top: 56px; bottom: 60px; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #flipbook { touch-action: pan-y; }
+
+  /* ===== 하단 컨트롤 바 ===== */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: rgba(0,0,0,0.55);
+    z-index: 100;
+  }
+  .nav-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,0.15);
+    color: #fff; font-size: 20px; cursor: pointer;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.3); }
+  .page-indicator { color: #fff; font-size: 14px; min-width: 90px; text-align: center; }
+
+  .loading {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 16px; background: #2b2b2b; z-index: 200;
+  }
+</style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <a id="backLink" href="shelf.html">&lt; 책장으로 돌아가기</a>
+    <div class="book-title" id="bookTitle">불러오는 중...</div>
+  </div>
+
+  <div class="flip-wrap">
+    <div id="flipbook"></div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="nav-btn" id="prevBtn">‹</button>
+    <div class="page-indicator" id="pageIndicator">- / -</div>
+    <button class="nav-btn" id="nextBtn">›</button>
+  </div>
+
+  <div class="loading" id="loadingMsg">페이지를 불러오는 중입니다...</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, getDoc } 
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB6kxQc7iJkiUg4kcuhnjREJYjQZf0nofQ",
+    authDomain: "my-kids-diary-836c7.firebaseapp.com",
+    projectId: "my-kids-diary-836c7",
+    storageBucket: "my-kids-diary-836c7.firebasestorage.app",
+    messagingSenderId: "578898710891",
+    appId: "1:578898710891:web:26a981d53e57ab819bbc2e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const TOTAL_PAGES = 108; // 실제 PDF 페이지 수에 맞게 수정하세요
+  const params = new URLSearchParams(window.location.search);
+  const childId = params.get('child');
+  const bookId  = params.get('book');
+
+  if (!childId || !bookId) {
+    document.getElementById('loadingMsg').textContent = '잘못된 접근입니다. 책장에서 다시 선택해주세요.';
+  } else {
+    init();
+  }
+
+  async function init() {
+    const docRef = doc(db, "children", childId);
+    const docSnap = await getDoc(docRef);
+    const childName = docSnap.exists() ? docSnap.data().name : childId;
+
+    document.getElementById('bookTitle').textContent = `${childName} - 제 ${Number(bookId)}권`;
+    document.getElementById('backLink').href = `shelf.html?child=${childId}`;
+
+    const pageImages = [];
+    for (let i = 1; i <= TOTAL_PAGES; i++) {
+      const p = String(i).padStart(3, '0');
+      pageImages.push(`pages/${childId}/vol${bookId}/page${p}.jpg`);
+    }
+
+    const hashMatch = window.location.hash.match(/p=(\d+)/);
+    let startPage = hashMatch ? parseInt(hashMatch[1], 10) - 1 : 0;
+    startPage = Math.max(0, Math.min(startPage, TOTAL_PAGES - 1));
+
+    const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
+      width: 550,
+      height: 733,
+      size: 'stretch',
+      minWidth: 280,
+      maxWidth: 1000,
+      minHeight: 400,
+      maxHeight: 1350,
+      showCover: true,      // ★ 첫 페이지(표지)를 "단독 페이지"로 중앙에 보여줌
+      usePortrait: true,    // PC는 양면, 모바일은 1페이지로 자동 전환
+      maxShadowOpacity: 0.5, // FlipHTML5의 넘김 그림자 효과와 유사하게
+      startPage: startPage
+    });
+
+    pageFlip.loadFromImages(pageImages);
+
+    document.getElementById('loadingMsg').style.display = 'none';
+    updateIndicator(pageFlip);
+
+    pageFlip.on('flip', () => {
+      const current = pageFlip.getCurrentPageIndex() + 1;
+      history.replaceState(null, '', `#p=${current}`);
+      updateIndicator(pageFlip);
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => pageFlip.flipPrev());
+    document.getElementById('nextBtn').addEventListener('click', () => pageFlip.flipNext());
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') pageFlip.flipNext();
+      if (e.key === 'ArrowLeft') pageFlip.flipPrev();
+    });
+
+    function updateIndicator(flip) {
+      const current = flip.getCurrentPageIndex() + 1;
+      document.getElementById('pageIndicator').textContent = `${current} / ${TOTAL_PAGES}`;
+    }
+  }
+</script>
+
+</body>
+</html>
