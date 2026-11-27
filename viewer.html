@@ -211,8 +211,11 @@
 
     pageFlip.on('flip', () => { updateIndicator(); updateViewport(); });
     updateIndicator();
+  // ✅ 수정: 페이지 넘김 애니메이션이 끝난 뒤에 창문 크기 변경
+  setTimeout(() => {
     updateViewport();
-
+  }, FLIP_ANIMATION_DURATION);
+});
     window.addEventListener('resize', () => {
       const size = computeStageSize();
       stageW = size.w; stageH = size.h;
