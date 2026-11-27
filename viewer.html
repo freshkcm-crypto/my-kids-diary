@@ -24,20 +24,15 @@
   .music-bar button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
   .music-title { font-size: 12px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* 바깥 공간: 화면 중앙 배치 역할만 함 */
   .flip-wrap {
     position: fixed; top: 56px; bottom: 60px; left: 0; right: 0;
     display: flex; align-items: center; justify-content: center;
   }
-
-  /* "창문": 보이는 크기만 조절, 책 자체는 안 건드림 */
   .flip-viewport {
     position: relative;
     overflow: hidden;
     transition: width 0.3s ease;
   }
-
-  /* "책 무대": 항상 펼친 상태의 고정 크기 유지 */
   .flip-stage {
     position: absolute;
     top: 0;
@@ -105,14 +100,11 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
- const R2_BASE_URL = "https://pub-f6d822e0d6204700a6988d82ac3533c1.r2.dev";
- const TOTAL_PAGES = 20;
- const IMAGE_FOLDER = `${R2_BASE_URL}/Pages/child01/vol01`;
- const BGM_PATH = `${R2_BASE_URL}/music/child01/vol01_bgm.mp3`;
-
- 
-  const SPREAD_RATIO = 1040 / 735; // 펼친 상태 가로:세로 비율 (고정값)
-  const FLIP_ANIMATION_DURATION = 600; // 넘김 애니메이션 끝나는 시점 추정(ms), 400~800 사이 조정 가능
+  // ===== R2 설정 (실제 운영 시 이 부분만 교체) =====
+  const R2_BASE_URL = "https://pub-f6d822e0d6204700a6988d82ac3533c1.r2.dev";  // 실제 발급받은 주소로 교체
+  const IMAGE_FOLDER = R2_BASE_URL + "/Pages/child01/vol01";   // 캡처 확인된 경로: Pages(대문자)/child01/vol01
+  const BGM_PATH = R2_BASE_URL + "/music/child01/vol01_bgm.mp3";
+  const MAX_CHECK = 50; // 최대 몇 장까지 확인해볼지 (여유있게 설정)
 
   const params = new URLSearchParams(window.location.search);
   const childId = params.get('child');
@@ -124,6 +116,28 @@
     init();
   }
 
+  // 이미지가 실제로 존재하는지 확인
+  function checkImageExists(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
+
+  // 1장부터 순서대로 확인하며 자동으로 총 페이지 수 감지
+  async function detectTotalPages(folderUrl) {
+    let count = 0;
+    for (let i = 1; i <= MAX_CHECK; i++) {
+      const url = folderUrl + "/pages (" + i + ").jpg";
+      const exists = await checkImageExists(url);
+      if (!exists) break;
+      count = i;
+    }
+    return count;
+  }
+
   async function init() {
     let childName = childId;
     try {
@@ -131,15 +145,23 @@
       if (docSnap.exists()) childName = docSnap.data().name;
     } catch (e) { /* 테스트 아이디는 무시 */ }
 
-    document.getElementById('bookTitle').textContent = `${childName} - 제 ${Number(bookId)}권`;
-    document.getElementById('backLink').href = `shelf.html?child=${childId}`;
+    document.getElementById('bookTitle').textContent = childName + " - 제 " + Number(bookId) + "권";
+    document.getElementById('backLink').href = "shelf.html?child=" + childId;
+
+    // ===== 자동으로 총 페이지 수 감지 =====
+    const TOTAL_PAGES = await detectTotalPages(IMAGE_FOLDER);
+
+    if (TOTAL_PAGES === 0) {
+      document.getElementById('loadingMsg').textContent = '이미지를 찾을 수 없습니다. 경로를 확인해주세요.';
+      return;
+    }
 
     const pageImages = [];
     for (let i = 1; i <= TOTAL_PAGES; i++) {
-      const p = String(i).padStart(3, '0');
-      pageImages.push(`${IMAGE_FOLDER}/page$20({p}).jpg`);
+      pageImages.push(IMAGE_FOLDER + "/pages (" + i + ").jpg");
     }
 
+    const SPREAD_RATIO = 1040 / 735;
     const wrap = document.querySelector('.flip-wrap');
     const viewport = document.getElementById('flipViewport');
     const stage = document.getElementById('flipStage');
@@ -188,7 +210,6 @@
     function updateViewport() {
       const current = pageFlip.getCurrentPageIndex();
       const mode = getSingleMode(current);
-
       if (mode === 'cover') {
         viewport.style.width = (stageW / 2) + 'px';
         stage.style.left = (-stageW / 2) + 'px';
@@ -203,14 +224,14 @@
 
     function updateIndicator() {
       const current = pageFlip.getCurrentPageIndex() + 1;
-      document.getElementById('pageIndicator').textContent = `${current} / ${TOTAL_PAGES}`;
+      document.getElementById('pageIndicator').textContent = current + " / " + TOTAL_PAGES;
       slider.value = current;
     }
 
-    // 넘김 애니메이션이 끝난 뒤에 창문 크기 변경 (순서 어긋남 방지)
     pageFlip.on('flip', () => {
       updateIndicator();
       updateViewport();
+    });
 
     updateIndicator();
     updateViewport();
@@ -233,9 +254,9 @@
     const bgm = document.getElementById('bgmPlayer');
     const playPauseBtn = document.getElementById('playPauseBtn');
     bgm.src = BGM_PATH;
-    document.getElementById('musicTitle').textContent = `제 ${Number(bookId)}권 배경음악`;
+    document.getElementById('musicTitle').textContent = "제 " + Number(bookId) + "권 배경음악";
     playPauseBtn.addEventListener('click', () => {
-      if (bgm.paused) { bgm.play().catch(()=>{}); playPauseBtn.textContent = '⏸'; }
+      if (bgm.paused) { bgm.play().catch(() => {}); playPauseBtn.textContent = '⏸'; }
       else { bgm.pause(); playPauseBtn.textContent = '▶'; }
     });
   }
