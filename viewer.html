@@ -200,12 +200,16 @@
     const slider = document.getElementById('pageSlider');
     slider.max = TOTAL_PAGES;
 
-    function getSingleMode(currentIndex) {
-      if (currentIndex === 0) return 'cover';
-      const isLastAlone = (currentIndex === TOTAL_PAGES - 1) && (TOTAL_PAGES % 2 === 0);
-      if (isLastAlone) return 'last';
-      return null;
-    }
+function getSingleMode(currentIndex) {
+  if (currentIndex === 0) return 'cover'; // 1페이지(표지)는 항상 단독
+
+  const remainingAfterCover = TOTAL_PAGES - 1;
+  // 나머지가 "홀수"일 때만 마지막 페이지가 단독으로 남음
+  const isLastAlone = (currentIndex === TOTAL_PAGES - 1) && (remainingAfterCover % 2 === 1);
+
+  if (isLastAlone) return 'last';
+  return null;
+}
 
     function updateViewport() {
       const current = pageFlip.getCurrentPageIndex();
