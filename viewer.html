@@ -208,10 +208,7 @@
     // 넘김 애니메이션이 끝난 뒤에 창문 크기 변경 (순서 어긋남 방지)
     pageFlip.on('flip', () => {
       updateIndicator();
-      setTimeout(() => {
-        updateViewport();
-      }, FLIP_ANIMATION_DURATION);
-    });
+      updateViewport();
 
     updateIndicator();
     updateViewport();
