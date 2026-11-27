@@ -125,17 +125,24 @@
     });
   }
 
-  async function detectTotalPages(folderUrl) {
-    let count = 0;
-    for (let i = 1; i <= MAX_CHECK; i++) {
-      const url = folderUrl + "/pages (" + i + ").jpg";
-      const exists = await checkImageExists(url);
-      if (!exists) break;
-      count = i;
-    }
-    return count;
+async function detectTotalPages(folderUrl) {
+  const checks = [];
+  for (let i = 1; i <= MAX_CHECK; i++) {
+    const url = folderUrl + "/pages (" + i + ").jpg";
+    checks.push(checkImageExists(url));
   }
+  const results = await Promise.all(checks); // 모두 동시에 확인
 
+  let count = 0;
+  for (let i = 0; i < results.length; i++) {
+    if (results[i]) {
+      count = i + 1;
+    } else {
+      break; // 중간에 없는 게 나오면 멈춤 (연속된 파일 가정)
+    }
+  }
+  return count;
+}
   async function init() {
     let childName = childId;
     try {
