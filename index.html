@@ -90,6 +90,17 @@
         `;
         wrap.appendChild(a);
       });
+       const addCard = document.createElement('div');
+  addCard.className = 'add-child-card';
+  addCard.innerHTML = `<div class="plus-icon">+</div><div class="add-label">아이 추가</div>`;
+  addCard.addEventListener('click', () => {
+    const newName = prompt("아이 이름을 입력해주세요");
+    if (newName) {
+      alert(newName + " 등록 기능은 다음 단계에서 연결해드릴게요!");
+    }
+  });
+  wrap.appendChild(addCard);
+}  // ← loadChildren 함수가 끝나는 자리
     }
 
     loadChildren();
