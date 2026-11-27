@@ -209,10 +209,21 @@
       slider.value = current;
     }
 
-    pageFlip.on('flip', () => { updateIndicator(); updateViewport(); });
-    updateIndicator();
-    updateViewport();
+// 페이지 넘김 애니메이션의 대략적인 소요 시간(StPageFlip 기본값은 보통 500~1000ms 부근)
+const FLIP_ANIMATION_DURATION = 600; // 필요시 400~800 사이로 조정해서 테스트
 
+pageFlip.on('flip', () => {
+  updateIndicator();
+
+  // ❌ 기존: 즉시 창문 크기 변경
+  // updateViewport();
+
+  // ✅ 수정: 페이지 넘김 애니메이션이 끝난 뒤에 창문 크기 변경
+  setTimeout(() => {
+    updateViewport();
+  }, FLIP_ANIMATION_DURATION);
+});
+   
     window.addEventListener('resize', () => {
       const size = computeStageSize();
       stageW = size.w; stageH = size.h;
