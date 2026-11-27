@@ -20,10 +20,27 @@
   .children-wrap { display: flex; gap: 50px; flex-wrap: wrap; justify-content: center; }
   .child-card { text-decoration: none; text-align: center; color: #5a3b26; }
   .avatar-frame {
-    width: 140px; height: 140px; border-radius: 50%; overflow: hidden;
-    border: 5px solid #fff; box-shadow: 0 6px 16px rgba(0,0,0,0.15); background: #ddd;
+    width: 560px;   /* 140px × 4배 */
+    height: 560px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 5px solid #fff;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    background: #ddd;
   }
   .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* 아이 추가하기 카드 */
+  .add-child-card {
+    width: 560px; height: 560px;
+    border-radius: 50%;
+    border: 4px dashed #c8b8a0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer; color: #c8b8a0;
+  }
+  .add-child-card .plus-icon { font-size: 80px; line-height: 1; }
+  .add-child-card .add-label { margin-top: 10px; font-size: 20px; }
   .child-name { display: block; margin-top: 14px; font-size: 18px; font-weight: bold; }
 </style>
 </head>
