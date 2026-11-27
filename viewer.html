@@ -182,7 +182,7 @@
     let stageH = stageSize.h;
     viewport.style.height = stageH + 'px';
 
-    const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
+    const  = new St.(document.getElementById('flipbook'), {
       width: 520,
       height: 735,
       size: 'stretch',
@@ -194,7 +194,7 @@
       startPage: 0
     });
 
-    pageFlip.loadFromImages(pageImages);
+    .loadFromImages(pageImages);
     document.getElementById('loadingMsg').style.display = 'none';
 
     const slider = document.getElementById('pageSlider');
@@ -212,7 +212,7 @@ function getSingleMode(currentIndex) {
 }
 
     function updateViewport() {
-      const current = pageFlip.getCurrentPageIndex();
+      const current = .getCurrentPageIndex();
       const mode = getSingleMode(current);
       if (mode === 'cover') {
         viewport.style.width = (stageW / 2) + 'px';
@@ -227,7 +227,7 @@ function getSingleMode(currentIndex) {
     }
 
 function updateIndicator() {
-  const current = pageFlip.getCurrentPageIndex(); // 0-index
+  const current = .getCurrentPageIndex(); // 0-index
   const mode = getSingleMode(current);
   let label;
 
@@ -246,6 +246,7 @@ function updateIndicator() {
   slider.value = current + 1;
 }
     pageFlip.on('flip', () => {
+      console.log('현재 인덱스:', pageFlip.getCurrentPageIndex(), '전체 페이지:', TOTAL_PAGES);
       updateIndicator();
       updateViewport();
     });
