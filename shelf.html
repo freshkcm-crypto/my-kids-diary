@@ -16,25 +16,51 @@
     background-repeat: repeat-y, no-repeat;
     min-height: 100vh;
   }
+
   .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px; }
   .back-link { color: #6b4a2b; font-weight: bold; text-decoration: none; font-size: 15px; }
   .back-link:hover { text-decoration: underline; }
+
   .child-title {
     text-align: center; font-size: 30px; font-weight: bold; color: #4a3322;
     margin: 0 0 40px; text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
   }
+
   .shelf-grid {
     display: grid; grid-template-columns: repeat(auto-fill, 110px);
     justify-content: center; gap: 46px 26px; padding: 10px 40px 80px;
   }
+
   .book-item { text-decoration: none; text-align: center; color: #3d2b1a; }
+
   .book-cover {
     width: 96px; height: 128px; object-fit: cover; border-radius: 2px;
     box-shadow: 2px 4px 6px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.4) inset;
     transition: transform 0.15s ease; display: block; margin: 0 auto;
   }
-  .book-item:hover .book-cover { transform: translateY(-10px) rotate(-1deg); }
-  .book-label { display: block; margin-top: 8px; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px rgba(255,255,255,0.6); }
+
+  /* ===== 추가: 책 아이콘 placeholder ===== */
+  .book-cover-placeholder {
+    width: 96px; height: 128px;
+    background: linear-gradient(135deg, #8a6d4b 0%, #5a3b26 100%);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 2px 4px 6px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.4) inset;
+    margin: 0 auto;
+    transition: transform 0.15s ease;
+  }
+  .book-cover-placeholder .book-icon { font-size: 36px; }
+
+  .book-item:hover .book-cover,
+  .book-item:hover .book-cover-placeholder {
+    transform: translateY(-10px) rotate(-1deg);
+  }
+
+  .book-label {
+    display: block; margin-top: 8px; font-size: 13px; font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.6);
+  }
+
   .empty-msg { text-align: center; color: #8a7256; font-size: 15px; margin-top: 60px; }
 </style>
 </head>
@@ -48,68 +74,69 @@
   <h1 class="child-title" id="childTitle">불러오는 중...</h1>
   <div class="shelf-grid" id="shelfGrid"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, getDoc } 
-      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB6kxQc7iJkiUg4kcuhnjREJYjQZf0nofQ",
-      authDomain: "my-kids-diary-836c7.firebaseapp.com",
-      projectId: "my-kids-diary-836c7",
-      storageBucket: "my-kids-diary-836c7.firebasestorage.app",
-      messagingSenderId: "578898710891",
-      appId: "1:578898710891:web:26a981d53e57ab819bbc2e"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyB6kxQc7iJkiUg4kcuhnjREJYjQZf0nofQ",
+    authDomain: "my-kids-diary-836c7.firebaseapp.com",
+    projectId: "my-kids-diary-836c7",
+    storageBucket: "my-kids-diary-836c7.firebasestorage.app",
+    messagingSenderId: "578898710891",
+    appId: "1:578898710891:web:26a981d53e57ab819bbc2e"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    const params = new URLSearchParams(window.location.search);
-    const childId = params.get('child');
+  const params = new URLSearchParams(window.location.search);
+  const childId = params.get('child');
 
-    async function loadShelf() {
-      if (!childId) {
-        document.getElementById('childTitle').textContent = '잘못된 접근입니다.';
-        return;
-      }
-
-      const docRef = doc(db, "children", childId);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        document.getElementById('childTitle').textContent = '아이 정보를 찾을 수 없습니다';
-        return;
-      }
-
-      const child = docSnap.data();
-      document.getElementById('childTitle').textContent = `${child.name}의 일기장`;
-
-      const grid = document.getElementById('shelfGrid');
-      const bookCount = child.bookCount || 0;
-
-      if (bookCount === 0) {
-        grid.innerHTML = `<div class="empty-msg">아직 등록된 일기장이 없어요 📖</div>`;
-        return;
-      }
-
-      for (let i = 1; i <= bookCount; i++) {
-        const volNum = String(i).padStart(2, '0');
-        const a = document.createElement('a');
-        a.className = 'book-item';
-        a.href = `viewer.html?child=${childId}&book=${volNum}`;
-        a.innerHTML = `
-          <img class="book-cover" src="covers/${childId}/vol${volNum}.jpg" 
-               onerror="this.src='https://via.placeholder.com/96x128?text=No+Cover'" 
-               alt="제${i}권">
-          <span class="book-label">제 ${i}권</span>
-        `;
-        grid.appendChild(a);
-      }
+  async function loadShelf() {
+    if (!childId) {
+      document.getElementById('childTitle').textContent = '잘못된 접근입니다.';
+      return;
     }
 
-    loadShelf();
-  </script>
+    const docRef = doc(db, "children", childId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      document.getElementById('childTitle').textContent = '아이 정보를 찾을 수 없습니다';
+      return;
+    }
+
+    const child = docSnap.data();
+    document.getElementById('childTitle').textContent = `${child.name}의 일기장`;
+
+    const grid = document.getElementById('shelfGrid');
+    const bookCount = child.bookCount || 0;
+
+    if (bookCount === 0) {
+      grid.innerHTML = `<div class="empty-msg">아직 등록된 일기장이 없어요 📖</div>`;
+      return;
+    }
+
+    for (let i = 1; i <= bookCount; i++) {
+      const volNum = String(i).padStart(2, '0');
+      const a = document.createElement('a');
+      a.className = 'book-item';
+      a.href = `viewer.html?child=${childId}&book=${volNum}`;
+
+      // ===== 수정: 표지 이미지가 없으면 책 아이콘으로 대체 =====
+      a.innerHTML = `
+        <img class="book-cover" src="covers/${childId}/vol${volNum}.jpg"
+             onerror="this.outerHTML='<div class=&quot;book-cover-placeholder&quot;><span class=&quot;book-icon&quot;>📖</span></div>'"
+             alt="제${i}권">
+        <span class="book-label">제 ${i}권</span>
+      `;
+      grid.appendChild(a);
+    }
+  }
+
+  loadShelf();
+</script>
 
 </body>
 </html>
