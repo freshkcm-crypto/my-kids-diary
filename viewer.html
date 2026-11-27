@@ -24,25 +24,25 @@
   .music-bar button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
   .music-title { font-size: 12px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* ===== 바깥 공간: 화면 중앙에 배치하는 역할만 함 ===== */
+  /* 바깥 공간: 화면 중앙 배치 역할만 함 */
   .flip-wrap {
     position: fixed; top: 56px; bottom: 60px; left: 0; right: 0;
     display: flex; align-items: center; justify-content: center;
   }
 
-  /* ===== "창문(viewport)": 보이는 크기만 조절, 책 자체는 안 건드림 ===== */
+  /* "창문": 보이는 크기만 조절, 책 자체는 안 건드림 */
   .flip-viewport {
     position: relative;
-    overflow: hidden;             /* 창문 밖은 가려짐 */
-    transition: width 0.3s ease;  /* 창문 크기 변화만 부드럽게 */
+    overflow: hidden;
+    transition: width 0.3s ease;
   }
 
-  /* ===== "책 무대(stage)": 항상 "펼친 상태"의 고정 크기 유지, 절대 안 바뀜 ===== */
+  /* "책 무대": 항상 펼친 상태의 고정 크기 유지 */
   .flip-stage {
     position: absolute;
     top: 0;
     height: 100%;
-    transition: left 0.3s ease;   /* 좌우로 밀리는 것만 부드럽게 */
+    transition: left 0.3s ease;
   }
   #flipbook { width: 100% !important; height: 100% !important; touch-action: pan-y; }
 
@@ -105,11 +105,12 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // ===== 테스트 설정 =====
+  // ===== 테스트 설정 (실제 운영 시 이 3줄만 교체) =====
   const TOTAL_PAGES = 4;
   const IMAGE_FOLDER = "pages/test/vol01";
   const BGM_PATH = "music/test_bgm.mp3";
-  const SPREAD_RATIO = 1040 / 735; // 책을 "펼쳤을 때" 가로:세로 비율 (고정값, 절대 안 바뀜)
+  const SPREAD_RATIO = 1040 / 735; // 펼친 상태 가로:세로 비율 (고정값)
+  const FLIP_ANIMATION_DURATION = 600; // 넘김 애니메이션 끝나는 시점 추정(ms), 400~800 사이 조정 가능
 
   const params = new URLSearchParams(window.location.search);
   const childId = params.get('child');
@@ -126,7 +127,7 @@
     try {
       const docSnap = await getDoc(doc(db, "children", childId));
       if (docSnap.exists()) childName = docSnap.data().name;
-    } catch (e) {}
+    } catch (e) { /* 테스트 아이디는 무시 */ }
 
     document.getElementById('bookTitle').textContent = `${childName} - 제 ${Number(bookId)}권`;
     document.getElementById('backLink').href = `shelf.html?child=${childId}`;
@@ -137,9 +138,6 @@
       pageImages.push(`${IMAGE_FOLDER}/page${p}.jpg`);
     }
 
-    // ===== 핵심: flipbook이 들어갈 "stage"는 항상 고정 크기 =====
-    // StPageFlip에게는 "항상 펼친 상태의 일정한 공간"만 줘서,
-    // 라이브러리 내부가 절대 재계산/재애니메이션 하지 않게 함
     const wrap = document.querySelector('.flip-wrap');
     const viewport = document.getElementById('flipViewport');
     const stage = document.getElementById('flipStage');
@@ -155,7 +153,9 @@
       return { w, h };
     }
 
-    let { w: stageW, h: stageH } = computeStageSize();
+    let stageSize = computeStageSize();
+    let stageW = stageSize.w;
+    let stageH = stageSize.h;
     viewport.style.height = stageH + 'px';
 
     const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
@@ -176,12 +176,11 @@
     const slider = document.getElementById('pageSlider');
     slider.max = TOTAL_PAGES;
 
-    // ===== 이 페이지가 "단독"인지, 어느 쪽(왼/우)인지 판단 =====
     function getSingleMode(currentIndex) {
-      if (currentIndex === 0) return 'cover';            // 1페이지: 항상 단독, 오른쪽
+      if (currentIndex === 0) return 'cover';
       const isLastAlone = (currentIndex === TOTAL_PAGES - 1) && (TOTAL_PAGES % 2 === 0);
-      if (isLastAlone) return 'last';                     // 마지막(짝수 총페이지일 때): 단독, 왼쪽
-      return null;                                         // 그 외: 양면 펼침
+      if (isLastAlone) return 'last';
+      return null;
     }
 
     function updateViewport() {
@@ -189,15 +188,12 @@
       const mode = getSingleMode(current);
 
       if (mode === 'cover') {
-        // 오른쪽 절반만 보여줌 → 창문 폭 절반, 책을 왼쪽으로 반 칸 밀기
         viewport.style.width = (stageW / 2) + 'px';
         stage.style.left = (-stageW / 2) + 'px';
       } else if (mode === 'last') {
-        // 왼쪽 절반만 보여줌 → 창문 폭 절반, 책은 안 밀어도 됨
         viewport.style.width = (stageW / 2) + 'px';
         stage.style.left = '0px';
       } else {
-        // 양면 펼침 → 창문 전체 폭, 책 위치 그대로
         viewport.style.width = stageW + 'px';
         stage.style.left = '0px';
       }
@@ -209,21 +205,17 @@
       slider.value = current;
     }
 
-// 페이지 넘김 애니메이션의 대략적인 소요 시간(StPageFlip 기본값은 보통 500~1000ms 부근)
-const FLIP_ANIMATION_DURATION = 600; // 필요시 400~800 사이로 조정해서 테스트
+    // 넘김 애니메이션이 끝난 뒤에 창문 크기 변경 (순서 어긋남 방지)
+    pageFlip.on('flip', () => {
+      updateIndicator();
+      setTimeout(() => {
+        updateViewport();
+      }, FLIP_ANIMATION_DURATION);
+    });
 
-pageFlip.on('flip', () => {
-  updateIndicator();
-
-  // ❌ 기존: 즉시 창문 크기 변경
-  // updateViewport();
-
-  // ✅ 수정: 페이지 넘김 애니메이션이 끝난 뒤에 창문 크기 변경
-  setTimeout(() => {
+    updateIndicator();
     updateViewport();
-  }, FLIP_ANIMATION_DURATION);
-});
-   
+
     window.addEventListener('resize', () => {
       const size = computeStageSize();
       stageW = size.w; stageH = size.h;
