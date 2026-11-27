@@ -105,10 +105,18 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // ===== 테스트 설정 (실제 운영 시 이 3줄만 교체) =====
-  const TOTAL_PAGES = 4;
-  const IMAGE_FOLDER = "pages/test/vol01";
-  const BGM_PATH = "music/test_bgm.mp3";
+// ===== R2 설정 =====
+  const R2_BASE_URL = "https://pub-xxxxxxxxxxxxxxxx.r2.dev"; // 실제 발급받은 주소로 교체
+
+  const TOTAL_PAGES = 20; // 실제 업로드한 장수
+  const pageImages = [];
+   for (let i = 1; i <= TOTAL_PAGES; i++) {
+    const p = String(i).padStart(3, '0');
+  pageImages.push(`${R2_BASE_URL}/pages/child01/vol01/page${p}.jpg`);
+}
+
+  const BGM_PATH = `${R2_BASE_URL}/music/child01/vol01_bgm.mp3`;
+ 
   const SPREAD_RATIO = 1040 / 735; // 펼친 상태 가로:세로 비율 (고정값)
   const FLIP_ANIMATION_DURATION = 600; // 넘김 애니메이션 끝나는 시점 추정(ms), 400~800 사이 조정 가능
 
