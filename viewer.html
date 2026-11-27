@@ -226,12 +226,25 @@ function getSingleMode(currentIndex) {
       }
     }
 
-    function updateIndicator() {
-      const current = pageFlip.getCurrentPageIndex() + 1;
-      document.getElementById('pageIndicator').textContent = current + " / " + TOTAL_PAGES;
-      slider.value = current;
-    }
+function updateIndicator() {
+  const current = pageFlip.getCurrentPageIndex(); // 0-index
+  const mode = getSingleMode(current);
+  let label;
 
+  if (mode === 'cover') {
+    label = "1"; // 표지는 항상 단독 1페이지
+  } else if (mode === 'last') {
+    label = String(TOTAL_PAGES); // 마지막 단독
+  } else {
+    // 펼쳐진 두 페이지 번호 계산 (1-index 기준)
+    const left = current + 1;
+    const right = current + 2;
+    label = left + "-" + right;
+  }
+
+  document.getElementById('pageIndicator').textContent = label + " / " + TOTAL_PAGES;
+  slider.value = current + 1;
+}
     pageFlip.on('flip', () => {
       updateIndicator();
       updateViewport();
