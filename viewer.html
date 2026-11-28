@@ -128,7 +128,7 @@
 async function detectTotalPages(folderUrl) {
   const checks = [];
   for (let i = 1; i <= MAX_CHECK; i++) {
-    const url = folderUrl + "/pages (" + i + ").jpg";
+    const url = folderUrl + "/pages (" + i + ").png";
     checks.push(checkImageExists(url));
   }
   const results = await Promise.all(checks); // 모두 동시에 확인
